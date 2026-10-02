@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>教師請假課務處理請示單暨與代課教師聯繫表</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #f8f9fa; font-family: "Microsoft JhengHei", "標楷體", sans-serif; }
+    .form-container { max-width: 950px; margin: 30px auto; background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    .header-title { text-align: center; color: #0d6efd; margin-bottom: 25px; font-weight: bold; }
+    .section-title { background: #e9ecef; padding: 8px 15px; border-left: 5px solid #0d6efd; margin-top: 20px; font-weight: bold; }
+    
+    .schedule-table th, .schedule-table td { font-size: 0.9rem; padding: 6px 4px; text-align: center; vertical-align: middle; }
+    .schedule-table input { font-size: 0.9rem; text-align: center; }
+
+    #printArea { display: none; }
+
+    @media print {
+      body * { visibility: hidden; }
+      #printArea, #printArea * { visibility: visible; }
+      #printArea {
+        display: block !important;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        color: #000;
+        font-family: "標楷體", "Microsoft JhengHei", serif;
+      }
+      @page {
+        size: A4 portrait;
+        margin: 10mm;
+      }
+      .print-title { text-align: center; font-size: 18pt; font-weight: bold; margin-bottom: 5px; }
+      .print-subtitle { text-align: center; font-size: 16pt; font-weight: bold; margin-bottom: 15px; }
+      
+      .print-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 0px;
+      }
+      .print-table th, .print-table td {
+        border: 1px solid #000;
+        padding: 5px 3px;
+        text-align: center;
+        font-size: 10pt;
+        vertical-align: middle;
+      }
+      .text-left { text-align: left !important; padding-left: 6px !important; }
+      .sig-box { height: 60px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container form-container" id="inputFormArea">
+  <h3 class="header-title">教師請假課務處理請示單暨與代課教師聯繫表</h3>
+  
+  <form id="leaveForm">
+    <div class="section-title">一、基本資料與假別</div>
+    <div class="row g-3 mt-1">
+      <div class="col-md-4">
+        <label class="form-label">教師姓名</label>
+        <select class="form-select" id="teacherNameSelect" name="teacherName" required>
+          <option value="">請選擇教師</option>
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">假別</label>
+        <select class="form-select" name="leaveType" required>
+          <option value="">請選擇</option>
+          <option value="事假">事假</option>
+          <option value="病假">病假</option>
+          <option value="休假">休假</option>
+          <option value="公假">公假</option>
+          <option value="公差假">公差假</option>
+          <option value="喪假">喪假</option>
+          <option value="補休">補休</option>
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">事假是否務必參加</label>
+        <select class="form-select" name="mustAttend">
+          <option value="否">否</option>
+          <option value="是">是</option>
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">開始時間</label>
+        <input type="datetime-local" class="form-control" name="startDate" required>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">結束時間</label>
+        <input type="datetime-local" class="form-control" name="endDate" required>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">請假合計（日/時）</label>
+        <input type="text" class="form-control" name="totalHours" placeholder="例如：1天 或 2小時" required>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">事由</label>
+        <input type="text" class="form-control" name="reason" required>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">地點</label>
+        <input type="text" class="form-control" name="location">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">文號</label>
+        <input type="text" class="form-control" name="documentNo">
+      </div>
+    </div>
+
+    <div class="section-title">二、課務抽排與代課說明</div>
+    <div class="table-responsive mt-2">
+      <table class="table table-bordered schedule-table">
+        <thead class="table-light">
+          <tr>
+            <th style="width: 15%;">節次/時間</th>
+            <th style="width: 20%;">班別</th>
+            <th style="width: 20%;">科目</th>
+            <th style="width: 20%;">代課教師</th>
+            <th style="width: 25%;">授課內容及進度</th>
+          </tr>
+        </thead>
+        <tbody id="scheduleBody"></tbody>
+      </table>
+    </div>
+
+    <div class="section-title">三、其他與代課教師聯繫事項</div>
+    <div class="mt-2">
+      <textarea class="form-control" name="contactNotes" rows="3" placeholder="例如：午休督導事項、交代事項等..."></textarea>
+    </div>
+
+    <div class="section-title">四、導護代理</div>
+    <div class="row g-3 mt-1">
+      <div class="col-md-6">
+        <label class="form-label">導護代理人</label>
+        <select class="form-select" id="dutyProxySelect" name="dutyProxy">
+          <option value="無">無（無須導護代理）</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="text-center mt-4">
+      <button type="submit" id="submitBtn" class="btn btn-primary btn-lg px-5">儲存並預覽列印 (PDF)</button>
+    </div>
+  </form>
+</div>
+
+<div id="printArea">
+  <div class="print-title">南投縣中山國民小學</div>
+  <div class="print-subtitle">教師請假課務處理請示單暨與代課教師聯繫表</div>
+
+  <table class="print-table">
+    <tr>
+      <td style="width: 12%;"><strong>姓名</strong></td>
+      <td style="width: 18%;" id="p_name"></td>
+      <td style="width: 12%;"><strong>請假<br>年月</strong></td>
+      <td style="width: 20%;" id="p_dates"></td>
+      <td style="width: 8%;"><strong>合計</strong></td>
+      <td style="width: 30%;" id="p_total"></td>
+    </tr>
+    <tr>
+      <td><strong>事事由</strong></td>
+      <td colspan="3" class="text-left" id="p_reason"></td>
+      <td><strong>假別</strong></td>
+      <td id="p_leaveType"></td>
+    </tr>
+    <tr>
+      <td><strong>地點<br>文號</strong></td>
+      <td colspan="5" class="text-left" id="p_locDoc"></td>
+    </tr>
+
+    <tr>
+      <td><strong>節次/時間</strong></td>
+      <td><strong>班別</strong></td>
+      <td><strong>科目</strong></td>
+      <td><strong>代課教師</strong></td>
+      <td colspan="2"><strong>授課內容及進度</strong></td>
+    </tr>
+
+    <tbody id="p_scheduleRows"></tbody>
+
+    <tr>
+      <td rowspan="2"><strong>其他與代課<br>教師聯繫</strong></td>
+      <td colspan="3" rowspan="2" class="text-left" style="vertical-align: top;" id="p_notes"></td>
+      <td><strong>導護<br>代理</strong></td>
+      <td id="p_duty"></td>
+    </tr>
+    <tr>
+      <td colspan="2" style="font-size: 8.5pt; text-align: left; padding: 4px;">
+        事假是否務必參加？<br>
+        (<span id="p_mustAttend"></span>) <br><br>
+        請假老師簽名：
+      </td>
+    </tr>
+    <tr class="sig-box">
+      <td><strong>簽核</strong></td>
+      <td colspan="2"><strong>勞保承辦人</strong><br><br></td>
+      <td><strong>教務組長</strong><br><br></td>
+      <td><strong>教導主任</strong><br><br></td>
+      <td><strong>校長</strong><br><br></td>
+    </tr>
+  </table>
+</div>
+
+<script>
+  // ⚠️ 請替換為您在 步驟 1-2 取得的 URL
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby2xTjS4KQHG9mgN-R3987aIfmdnncqiNYpUfFYl_M19Zx1-leP2sB1cqtetM_Gl-6o5w/exec";
+
+  const teacherList = ["蔡秀妤", "黃冠彰", "段定亞", "陳顥元", "彭馨褕", "許惠貞", "余韻柔", "陳佳慧", "黃筱琪", "張家瑜", "陳鈺靜", "張嘉芳", "林佩瑤", "曹佳雯"];
+  const teacherSelect = document.getElementById("teacherNameSelect");
+  const dutySelect = document.getElementById("dutyProxySelect");
+
+  teacherList.forEach(name => {
+    let opt1 = document.createElement("option");
+    opt1.value = name; opt1.textContent = name;
+    teacherSelect.appendChild(opt1);
+
+    let opt2 = document.createElement("option");
+    opt2.value = name; opt2.textContent = name;
+    dutySelect.appendChild(opt2);
+  });
+
+  const periods = ["1", "2", "3", "4", "5", "用餐及午休", "6", "7", "8", "放學"];
+  const tbody = document.getElementById("scheduleBody");
+  
+  periods.forEach((p, index) => {
+    let tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><strong>${p}</strong></td>
+      <td><input type="text" class="form-control" name="class_${index}"></td>
+      <td><input type="text" class="form-control" name="subject_${index}"></td>
+      <td><input type="text" class="form-control" name="subTeacher_${index}"></td>
+      <td><input type="text" class="form-control" name="content_${index}"></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById("leaveForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+    
+    let btn = document.getElementById("submitBtn");
+    btn.disabled = true;
+    btn.innerText = "資料處理中，請稍候...";
+
+    let formData = {
+      teacherName: this.teacherName.value,
+      leaveType: this.leaveType.value,
+      mustAttend: this.mustAttend.value,
+      startDate: this.startDate.value,
+      endDate: this.endDate.value,
+      totalHours: this.totalHours.value,
+      reason: this.reason.value,
+      location: this.location.value,
+      documentNo: this.documentNo.value,
+      contactNotes: this.contactNotes.value,
+      dutyProxy: this.dutyProxy.value,
+      schedule: []
+    };
+
+    let pScheduleBody = document.getElementById("p_scheduleRows");
+    pScheduleBody.innerHTML = "";
+
+    periods.forEach((p, i) => {
+      let cls = this[`class_${i}`].value;
+      let subj = this[`subject_${i}`].value;
+      let subT = this[`subTeacher_${i}`].value;
+      let cont = this[`content_${i}`].value;
+
+      formData.schedule.push({ period: p, className: cls, subject: subj, teacher: subT, content: cont });
+
+      let tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${p}</td>
+        <td>${cls || ""}</td>
+        <td>${subj || ""}</td>
+        <td>${subT || ""}</td>
+        <td colspan="2" class="text-left">${cont || ""}</td>
+      `;
+      pScheduleBody.appendChild(tr);
+    });
+
+    document.getElementById("p_name").innerText = formData.teacherName;
+    document.getElementById("p_dates").innerText = (formData.startDate || "").replace("T", " ") + " ~ " + (formData.endDate || "").replace("T", " ");
+    document.getElementById("p_total").innerText = formData.totalHours;
+    document.getElementById("p_reason").innerText = formData.reason;
+    document.getElementById("p_leaveType").innerText = formData.leaveType;
+    document.getElementById("p_locDoc").innerText = "地點：" + (formData.location || "無") + " / 文號：" + (formData.documentNo || "無");
+    document.getElementById("p_notes").innerText = formData.contactNotes;
+    document.getElementById("p_duty").innerText = formData.dutyProxy;
+    document.getElementById("p_mustAttend").innerText = formData.mustAttend === "是" ? "✔ 是  口 否" : "口 是  ✔ 否";
+
+    // 使用 fetch 替代 google.script.run
+    fetch(GAS_WEB_APP_URL, {
+      method: "POST",
+      mode: "no-cors", // 避免 Google Apps Script 的 CORS 限制問題
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formData)
+    })
+    .then(() => {
+      btn.disabled = false;
+      btn.innerText = "儲存並預覽列印 (PDF)";
+      alert("資料已送出至 Google 試算表！");
+      window.print();
+    })
+    .catch(err => {
+      btn.disabled = false;
+      btn.innerText = "儲存並預覽列印 (PDF)";
+      alert("傳送發生錯誤：" + err.message);
+    });
+  });
+</script>
+
+</body>
+</html>
